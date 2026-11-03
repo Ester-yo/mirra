@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Eye, Info, Search, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { StreamVideo } from "@/components/media/StreamVideo";
 import { ANALYTICS_SUMMARY } from "@/lib/catalog";
 import type { AdRecord, AdStatus } from "@/lib/types";
 import { useCreationStore } from "@/store/useCreationStore";
@@ -540,9 +541,13 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 
 function MockPlayer({ ad }: { ad: AdRecord }) {
   return (
-    <div className="overflow-hidden rounded-2xl bg-slate-950">
-      <video src={ad.videoUrl} poster={ad.posterUrl} controls playsInline className="aspect-[9/16] w-full object-cover" />
-    </div>
+    <StreamVideo
+      src={ad.videoUrl}
+      poster={ad.posterUrl}
+      controls
+      badge
+      className="aspect-[9/16] w-full rounded-2xl"
+    />
   );
 }
 

@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Columns2, Link2, Loader2, Sparkles } from "lucide-react";
 import { VideoCard } from "@/components/inspiration/VideoCard";
+import { StreamVideo } from "@/components/media/StreamVideo";
 import { CATEGORIES, CHANNEL_BY_ID, CHANNELS, INSPIRATION, PRESETS } from "@/lib/mock-data";
 import { parseReferenceInput } from "@/lib/parse";
 import type { InspirationVideo } from "@/lib/types";
@@ -326,13 +327,12 @@ export default function InspirationPage() {
             </button>
             {selectedVideos.map((video) => (
               <div key={video.id} className="min-w-0">
-                <video
+                <StreamVideo
                   src={video.videoUrl}
                   poster={video.posterUrl}
                   controls
-                  muted
-                  playsInline
-                  className="mx-auto aspect-[9/16] max-h-[420px] rounded-2xl bg-black object-cover"
+                  badge
+                  className="mx-auto aspect-[9/16] max-h-[420px] w-full rounded-2xl"
                 />
                 <h3 className="mt-3 text-sm font-medium">{video.title}</h3>
                 <p className="mt-1 text-xs text-slate-500">

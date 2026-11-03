@@ -2,6 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { StreamVideo } from "@/components/media/StreamVideo";
 
 export function PreviewModal({
   open,
@@ -30,14 +31,12 @@ export function PreviewModal({
           <Dialog.Description className="sr-only">视频预览</Dialog.Description>
           <div className="overflow-hidden rounded-2xl bg-slate-950">
             {videoUrl ? (
-              <video
-                key={videoUrl}
+              <StreamVideo
                 src={videoUrl}
                 poster={posterUrl}
                 controls
-                autoPlay
-                playsInline
-                className="aspect-[9/16] w-full bg-black object-contain"
+                badge
+                className="aspect-[9/16] w-full rounded-2xl"
               />
             ) : (
               <div className="flex aspect-[9/16] items-center justify-center text-sm text-slate-400">暂无可播放成片</div>

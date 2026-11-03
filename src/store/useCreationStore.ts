@@ -82,6 +82,8 @@ type CreationState = {
   toasts: ToastItem[];
   selectTemplateForRemix: (template: TemplateInput) => void;
   updateScriptField: (field: keyof ScriptBreakdown, value: string) => void;
+  syncRemixScript: (script: ScriptBreakdown) => void;
+  clearReferenceVideo: () => void;
   addProductImages: (urls: string[]) => void;
   removeProductImage: (url: string) => void;
   setProductLink: (value: string) => void;
@@ -226,6 +228,36 @@ export const useCreationStore = create<CreationState>((set, get) => ({
     const current = get().currentTemplate;
     if (!current) return;
     set({ currentTemplate: { ...current, script: { ...current.script, [field]: value } } });
+  },
+
+  syncRemixScript: (script) => {
+    const current = get().currentTemplate;
+    const product = get().currentProductForStudio;
+    if (!current) {
+      set({
+        currentTemplate: {
+          id: "freeform",
+          title: product?.title || "自由成片",
+          sourceUrl: "",
+          videoUrl: "",
+          posterUrl: "",
+          script,
+          category: product?.category,
+        },
+      });
+      return;
+    }
+    if (current.script.hook === script.hook && current.script.demo === script.demo && current.script.cta === script.cta) return;
+    const title = current.id === "freeform" && product ? product.title : current.title;
+    set({ currentTemplate: { ...current, title, category: product?.category ?? current.category, script } });
+  },
+
+  clearReferenceVideo: () => {
+    const current = get().currentTemplate;
+    set({
+      keyframes: ["", "", ""],
+      currentTemplate: current ? { ...current, videoUrl: "", posterUrl: "", sourceUrl: "" } : current,
+    });
   },
 
   addProductImages: (urls) => {
@@ -404,8 +436,11 @@ export const useCreationStore = create<CreationState>((set, get) => ({
   startGeneration: () => {
     const state = get();
     if (state.genStatus === "running") return false;
-    if (!state.currentTemplate) {
-      state.pushToast("请先解析链接或上传参考视频", "warning");
+    const script = state.currentTemplate?.script ?? { hook: "", demo: "", cta: "" };
+    const hasVideo = Boolean(state.currentTemplate?.videoUrl);
+    const hasImages = state.uploadedProductImages.length > 0;
+    if (!hasVideo && !hasImages) {
+      state.pushToast("请上传商品图，或添加一条参考视频", "warning");
       return false;
     }
     if (state.credits < REMIX_COST) {
@@ -413,10 +448,17 @@ export const useCreationStore = create<CreationState>((set, get) => ({
       return false;
     }
 
-    const template = state.currentTemplate;
+    const template = state.currentTemplate ?? {
+      id: "freeform",
+      title: state.productMeta?.title || state.currentProductForStudio?.title || "自由成片",
+      sourceUrl: "",
+      videoUrl: "",
+      posterUrl: state.uploadedProductImages[0] || "",
+      script,
+    };
     const creditsAfter = state.credits - REMIX_COST;
     const duration = state.duration;
-    const resultUrl = pickResultClip(template.videoUrl);
+    const resultUrl = pickResultClip(template.videoUrl || CLIPS[0]);
     const token = ++genToken;
     clearTimers();
 

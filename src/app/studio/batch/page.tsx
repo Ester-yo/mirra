@@ -1,10 +1,12 @@
 "use client";
 
 import { Bot, Check, Download, FolderOpen, Link2, Loader2, Lock, Package, Play, Plus, Upload, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { StreamVideo } from "@/components/media/StreamVideo";
 import { PreviewModal } from "@/components/modals/PreviewModal";
 import { ProPaywallModal } from "@/components/modals/ProPaywallModal";
 import { MATRIX_HOOKS, WORKFLOW_TEMPLATES } from "@/lib/catalog";
+import { posterForClip } from "@/lib/media";
 import { CLIPS, REMIX_COST } from "@/lib/mock-data";
 import { useCreationStore } from "@/store/useCreationStore";
 import { buildZip } from "@/lib/zip";
@@ -28,7 +30,7 @@ const SEED_QUEUE: QueueItem[] = [
     status: "completed",
     progress: 100,
     videoUrl: CLIPS[1],
-    posterUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&auto=format&fit=crop&q=80",
+    posterUrl: posterForClip(CLIPS[1]),
   },
 ];
 
@@ -694,7 +696,7 @@ function WorkflowCard({
   checked: boolean;
   onToggle: () => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [hot, setHot] = useState(false);
 
   return (
     <div
@@ -702,32 +704,17 @@ function WorkflowCard({
         "group overflow-hidden rounded-2xl border bg-white text-left",
         checked ? "border-brand ring-2 ring-brand/20" : "border-slate-100",
       )}
-      onMouseEnter={() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.muted = true;
-        void video.play().catch(() => undefined);
-      }}
-      onMouseLeave={() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.pause();
-        video.currentTime = 0;
+      tabIndex={0}
+      onMouseEnter={() => setHot(true)}
+      onMouseLeave={() => setHot(false)}
+      onFocus={() => setHot(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setHot(false);
       }}
     >
       <div className="relative aspect-[9/16] max-h-[168px] w-full overflow-hidden bg-slate-100">
-        <img src={item.posterUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:opacity-0" />
-        <video
-          ref={videoRef}
-          src={item.videoUrl}
-          poster={item.posterUrl}
-          muted
-          playsInline
-          loop
-          preload="metadata"
-          className="absolute inset-0 h-full w-full object-cover opacity-0 transition group-hover:opacity-100"
-        />
-        <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white transition group-hover:opacity-0">
+        <StreamVideo mode="hover" active={hot} src={item.videoUrl} poster={item.posterUrl} className="h-full w-full" />
+        <span className={cn("pointer-events-none absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white transition", hot && "opacity-0")}>
           <Play className="ml-0.5 h-4 w-4 fill-white" />
         </span>
         <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">{item.duration}</span>

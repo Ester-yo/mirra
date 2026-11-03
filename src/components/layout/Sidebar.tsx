@@ -13,7 +13,7 @@ const NAV = [
   {
     label: "创作",
     items: [
-      { href: "/studio/remix", label: "爆款复刻", icon: Clapperboard },
+      { href: "/studio/remix", label: "🎬 智能成片", icon: Clapperboard },
       { href: "/studio/batch", label: "批量生成", icon: Zap, pro: true },
     ],
   },

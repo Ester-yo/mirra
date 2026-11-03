@@ -1,29 +1,13 @@
+import { SHOWCASE_CLIPS, posterForClip } from "@/lib/media";
 import type { CatalogProduct, Channel, HistoryItem, InspirationVideo } from "@/lib/types";
 
 export const REMIX_COST = 645;
 export const BATCH_UNIT_COST = 800;
 
-export function clip(id: number, fps: 24 | 25 | 30 = 25) {
-  return `https://videos.pexels.com/video-files/${id}/${id}-sd_640_360_${fps}fps.mp4`;
-}
-
-export const CLIPS = [
-  clip(5835661),
-  clip(857195),
-  clip(5422522),
-  clip(6481474),
-  clip(3571264, 30),
-  clip(6891009, 30),
-  clip(1093662, 30),
-  clip(6336756),
-  clip(9241530, 30),
-  clip(1550080, 30),
-  clip(2795750),
-  clip(8877943),
-];
+export const CLIPS = SHOWCASE_CLIPS;
 
 const poster = (id: string) =>
-  `https://images.unsplash.com/${id}?w=600&auto=format&fit=crop&q=80`;
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=70`;
 
 export const INSPIRATION: InspirationVideo[] = [
   {
@@ -41,7 +25,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 2,
     hookType: "暴力测试",
     videoUrl: CLIPS[0],
-    posterUrl: poster("photo-1517256064527-09c73fc73e38"),
+    posterUrl: posterForClip(CLIPS[0]),
     isOfficial: true,
     isBookmarked: true,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-001",
@@ -66,7 +50,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 3,
     hookType: "极端拉伸",
     videoUrl: CLIPS[1],
-    posterUrl: poster("photo-1506126613408-eca07ce68773"),
+    posterUrl: posterForClip(CLIPS[1]),
     isOfficial: true,
     isBookmarked: true,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-002",
@@ -91,7 +75,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 1,
     hookType: "痛点解脱",
     videoUrl: CLIPS[2],
-    posterUrl: poster("photo-1522337360788-8b13dee7a37e"),
+    posterUrl: posterForClip(CLIPS[2]),
     isOfficial: false,
     isBookmarked: false,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-003",
@@ -116,7 +100,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 5,
     hookType: "微距质感",
     videoUrl: CLIPS[3],
-    posterUrl: poster("photo-1608571423902-eed4a5ad8108"),
+    posterUrl: posterForClip(CLIPS[3]),
     isOfficial: true,
     isBookmarked: true,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-004",
@@ -141,7 +125,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 6,
     hookType: "街拍换装",
     videoUrl: CLIPS[4],
-    posterUrl: poster("photo-1515886657613-9f3515b0c78f"),
+    posterUrl: posterForClip(CLIPS[4]),
     isOfficial: true,
     isBookmarked: false,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-005",
@@ -166,7 +150,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 4,
     hookType: "暴力测试",
     videoUrl: CLIPS[5],
-    posterUrl: poster("photo-1556910103-1c02745aae4d"),
+    posterUrl: posterForClip(CLIPS[5]),
     isOfficial: true,
     isBookmarked: false,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-006",
@@ -190,7 +174,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 2,
     hookType: "跌落测试",
     videoUrl: CLIPS[6],
-    posterUrl: poster("photo-1505740420928-5e560c06d30e"),
+    posterUrl: posterForClip(CLIPS[6]),
     isOfficial: false,
     isBookmarked: false,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-007",
@@ -214,7 +198,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 9,
     hookType: "口感放大",
     videoUrl: CLIPS[7],
-    posterUrl: poster("photo-1490481651871-ab68de25d43d"),
+    posterUrl: posterForClip(CLIPS[7]),
     isOfficial: false,
     isBookmarked: false,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-008",
@@ -238,7 +222,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 12,
     hookType: "氛围对比",
     videoUrl: CLIPS[8],
-    posterUrl: poster("photo-1519710164239-da123dc03ef4"),
+    posterUrl: posterForClip(CLIPS[8]),
     isOfficial: false,
     isBookmarked: true,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-009",
@@ -262,7 +246,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 6,
     hookType: "弯折测试",
     videoUrl: CLIPS[9],
-    posterUrl: poster("photo-1542291026-7eec264c27ff"),
+    posterUrl: posterForClip(CLIPS[9]),
     isOfficial: false,
     isBookmarked: false,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-010",
@@ -287,7 +271,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 4,
     hookType: "蹭色测试",
     videoUrl: CLIPS[10],
-    posterUrl: poster("photo-1596462502278-27bfdc403348"),
+    posterUrl: posterForClip(CLIPS[10]),
     isOfficial: true,
     isBookmarked: false,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-011",
@@ -311,7 +295,7 @@ export const INSPIRATION: InspirationVideo[] = [
     daysAgo: 18,
     hookType: "时长证明",
     videoUrl: CLIPS[11],
-    posterUrl: poster("photo-1611930022073-b7a4ba5fcccd"),
+    posterUrl: posterForClip(CLIPS[11]),
     isOfficial: false,
     isBookmarked: false,
     sourceUrl: "https://www.tiktok.com/@shop/video/v-012",
@@ -405,7 +389,7 @@ export const PRODUCTS: CatalogProduct[] = [
     title: "Ultra Stretch Squat-Proof Legging",
     description: "高弹不透，钢刷刮擦不起球。街拍换装结构，适合服饰测款和多色裂变。",
     images: [
-      poster("photo-1506126613408-eca07ce68773"),
+      poster("photo-1515886657613-9f3515b0c78f"),
       poster("photo-1515886657613-9f3515b0c78f"),
       poster("photo-1490481651871-ab68de25d43d"),
       poster("photo-1542291026-7eec264c27ff"),
@@ -454,7 +438,7 @@ export const SEED_HISTORY: HistoryItem[] = [
     status: "completed",
     createdAt: "2026-11-01T02:20:00.000Z",
     videoUrl: CLIPS[5],
-    posterUrl: poster("photo-1517256064527-09c73fc73e38"),
+    posterUrl: posterForClip(CLIPS[5]),
     prompt: "Product: Double-walled Tumbler Ice Test\nHOOK: 0-3s: Boiling water poured instantly on ice container (Shock Factor)\nDEMO: 3-10s: Internal temp gauge stays at 0°C under heat torch\nCTA: 10-15s: Flash sale prompt with buy-1-get-1 voucher overlay\nModel: Seedance 2.0 Fast (电商投流稳定版)\nRatio: 9:16\nResolution: 720P\nDuration: 15s\nVoice: US (美国) - 英语 (美音)",
     resolution: "720P",
     duration: 15,
@@ -466,7 +450,7 @@ export const SEED_HISTORY: HistoryItem[] = [
     status: "completed",
     createdAt: "2026-10-30T06:10:00.000Z",
     videoUrl: CLIPS[4],
-    posterUrl: poster("photo-1506126613408-eca07ce68773"),
+    posterUrl: posterForClip(CLIPS[4]),
     prompt: "Product: Ultra Stretch Leggings Wear Resistance\nHOOK: 0-3s: Steel brush scraping across fabric surface without tearing\nDEMO: 3-8s: Squat proof opacity check under studio ring light\nCTA: 8-12s: Limited quantity claim with direct buy badge\nModel: Seedance 2.0 Fast (电商投流稳定版)\nRatio: 9:16\nResolution: 720P\nDuration: 12s\nVoice: US (美国) - 英语 (美音)",
     resolution: "720P",
     duration: 12,
@@ -478,7 +462,7 @@ export const SEED_HISTORY: HistoryItem[] = [
     status: "completed",
     createdAt: "2026-10-29T09:40:00.000Z",
     videoUrl: CLIPS[3],
-    posterUrl: poster("photo-1608571423902-eed4a5ad8108"),
+    posterUrl: posterForClip(CLIPS[3]),
     prompt: "Product: Glass Skin Serum Macro Glow\nHook: Hook B: 显微镜痛点放大\nHOOK: Dewy cheek, pores visible\nDEMO: One drop, glass-skin reflection\nCTA: Bundle price\nModel: Seedance 2.0 Fast (电商投流稳定版)\nRatio: 9:16\nResolution: 720P\nDuration: 15s\nVoice: US (美国) - 英语 (美音)",
     resolution: "720P",
     duration: 15,
@@ -490,7 +474,7 @@ export const SEED_HISTORY: HistoryItem[] = [
     status: "failed",
     createdAt: "2026-10-28T11:05:00.000Z",
     videoUrl: "",
-    posterUrl: poster("photo-1522337360788-8b13dee7a37e"),
+    posterUrl: posterForClip(CLIPS[2]),
     prompt: "Product: Pore Vacuum Extraction Extreme Close-up\nHOOK: 0-3s: 200x digital microscope close-up of clogged pore\nDEMO: 3-11s: Single stroke vacuuming gunk cleanly in 1 pass\nCTA: 11-15s: 50% off intro price for first 100 orders\nModel: Seedance 2.0 Fast (电商投流稳定版)\nRatio: 9:16\nResolution: 480P\nDuration: 15s\nVoice: US (美国) - 英语 (美音)",
     resolution: "480P",
     duration: 15,
@@ -502,7 +486,7 @@ export const SEED_HISTORY: HistoryItem[] = [
     status: "completed",
     createdAt: "2026-10-27T03:15:00.000Z",
     videoUrl: CLIPS[9],
-    posterUrl: poster("photo-1515886657613-9f3515b0c78f"),
+    posterUrl: posterForClip(CLIPS[9]),
     prompt: "Product: Street Jacket One-take Outfit Swap\nHook: Hook C: 素人真实震惊反应\nHOOK: Same corner, three jackets\nDEMO: Wind test\nCTA: Shop-the-look sticker\nModel: Seedance 2.0 Fast (电商投流稳定版)\nRatio: 9:16\nResolution: 720P\nDuration: 12s\nVoice: US (美国) - 英语 (美音)",
     resolution: "720P",
     duration: 12,

@@ -2,6 +2,7 @@
 
 import { Play, Star } from "lucide-react";
 import { useState } from "react";
+import { StreamVideo } from "@/components/media/StreamVideo";
 import { CHANNEL_BY_ID } from "@/lib/mock-data";
 import type { InspirationVideo } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,6 @@ export function VideoCard({
   onToggleSelect?: () => void;
 }) {
   const [hot, setHot] = useState(false);
-  const [broken, setBroken] = useState(false);
 
   return (
     <article
@@ -32,24 +32,23 @@ export function VideoCard({
         "group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]",
         selected && "ring-2 ring-brand",
       )}
+      tabIndex={0}
       onMouseEnter={() => setHot(true)}
       onMouseLeave={() => setHot(false)}
+      onFocus={() => setHot(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setHot(false);
+      }}
       onClick={() => compareMode && onToggleSelect?.()}
     >
-      <div className="relative aspect-[9/16] overflow-hidden bg-slate-100">
-        <img src={video.posterUrl} alt="" className="h-full w-full object-cover" />
-        {hot && !broken ? (
-          <video
-            src={video.videoUrl}
-            poster={video.posterUrl}
-            muted
-            loop
-            playsInline
-            autoPlay
-            onError={() => setBroken(true)}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : null}
+      <div className="relative aspect-[9/16] overflow-hidden rounded-t-2xl bg-slate-100">
+        <StreamVideo
+          mode="hover"
+          active={hot}
+          src={video.videoUrl}
+          poster={video.posterUrl}
+          className="h-full w-full"
+        />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/75 to-transparent" />
         <div className="absolute left-2 right-2 top-2 flex items-start justify-between gap-2">
           <div className="flex min-w-0 flex-col items-start gap-1">

@@ -4,6 +4,8 @@ import * as Tabs from "@radix-ui/react-tabs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Download, History, Sparkles } from "lucide-react";
+import { posterForClip } from "@/lib/media";
+import { StreamVideo } from "@/components/media/StreamVideo";
 import { INSPIRATION } from "@/lib/mock-data";
 import { useCreationStore } from "@/store/useCreationStore";
 import { cn, downloadMp4 } from "@/lib/utils";
@@ -31,7 +33,7 @@ export function RemixCanvas() {
   };
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-canvas">
+    <section className="flex min-h-[70vh] min-w-0 flex-1 flex-col bg-canvas lg:min-h-0">
       <div className="flex items-center gap-6 border-b border-transparent px-6 pt-4">
         <Tabs.Root value={tab} onValueChange={(value) => setTab(value as "results" | "cases")}>
           <Tabs.List className="flex gap-5">
@@ -93,13 +95,12 @@ export function RemixCanvas() {
             <div className="grid w-full grid-cols-2 gap-4 rounded-3xl border border-slate-100 bg-white p-4 shadow-card">
               <PreviewSlot label="参考视频" ratio={aspectRatio}>
                 {template?.videoUrl ? (
-                  <video
-                    key={template.videoUrl}
+                  <StreamVideo
                     src={template.videoUrl}
-                    poster={template.posterUrl || undefined}
+                    poster={posterForClip(template.videoUrl)}
                     controls
-                    playsInline
-                    className="h-full w-full bg-black object-cover"
+                    badge
+                    className="h-full w-full"
                   />
                 ) : (
                   <EmptyHint text="解析或上传后在这里预览" />
@@ -122,13 +123,12 @@ export function RemixCanvas() {
                     </div>
                   </div>
                 ) : genStatus === "done" && genResultUrl ? (
-                  <video
-                    key={genResultUrl}
+                  <StreamVideo
                     src={genResultUrl}
+                    poster={posterForClip(genResultUrl)}
                     controls
-                    playsInline
-                    preload="auto"
-                    className="h-full w-full bg-black object-cover"
+                    badge
+                    className="h-full w-full"
                   />
                 ) : (
                   <EmptyHint text="生成后将在这里播放成片" />
