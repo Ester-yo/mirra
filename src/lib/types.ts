@@ -88,10 +88,19 @@ export type LibraryProduct = {
   id: string;
   title: string;
   category: string;
+  categoryTag?: string;
+  audience?: string;
   sellingPoints: string;
   images: string[];
   videoCount: number;
   testingHooks: number;
+};
+
+export type HookOption = {
+  id: string;
+  name: string;
+  detail: string;
+  line: string;
 };
 
 export type AdStatus = "winner" | "testing" | "stopped";

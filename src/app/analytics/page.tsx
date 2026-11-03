@@ -1,10 +1,10 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { Search, X } from "lucide-react";
+import { Eye, Info, Search, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ANALYTICS_SUMMARY, MATRIX_HOOKS, WORKFLOW_TEMPLATES } from "@/lib/catalog";
+import { ANALYTICS_SUMMARY } from "@/lib/catalog";
 import type { AdRecord, AdStatus } from "@/lib/types";
 import { useCreationStore } from "@/store/useCreationStore";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,29 @@ const STATUS_LABEL: Record<AdStatus, string> = {
   testing: "保本测试中",
   stopped: "跑输停投",
 };
+
+const GROUP_DATE: Record<string, string> = {
+  "exp-tumbler": "2026-10-28",
+  "exp-legging": "2026-10-22",
+  "exp-pore": "2026-10-19",
+  "exp-serum": "2026-10-16",
+  "exp-jacket": "2026-10-12",
+  "exp-spray": "2026-10-08",
+};
+
+const HISTORICAL_GROUPS = 8;
+const HISTORICAL_WINS = 2;
+
+type EntryDraft = {
+  spend: string;
+  ctr: string;
+  roas: string;
+  status: AdStatus;
+};
+
+function isQualifiedWinner(item: AdRecord) {
+  return item.ctr > 2.5 && item.roas > 2;
+}
 
 export default function AnalyticsPage() {
   return (
@@ -29,33 +52,72 @@ function AnalyticsBoard() {
   const productFromUrl = params.get("product") ?? "all";
   const ads = useCreationStore((state) => state.ads);
   const products = useCreationStore((state) => state.products);
-  const history = useCreationStore((state) => state.history);
-  const addAdRecord = useCreationStore((state) => state.addAdRecord);
+  const updateAdMetrics = useCreationStore((state) => state.updateAdMetrics);
   const prepareBatchFromAd = useCreationStore((state) => state.prepareBatchFromAd);
   const pushToast = useCreationStore((state) => state.pushToast);
 
   const [productId, setProductId] = useState(productFromUrl);
-  const [externalVideo, setExternalVideo] = useState("");
   const [status, setStatus] = useState<"all" | AdStatus>("all");
   const [query, setQuery] = useState("");
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [compare, setCompare] = useState<AdRecord | null>(null);
-  const [draft, setDraft] = useState({
-    source: "history",
-    historyId: "",
-    title: "",
-    productId: products[0]?.id ?? "",
-    hookId: "a",
-    templateId: "street",
-    channel: "TikTok Ads" as AdRecord["channel"],
-    spend: "200",
-    ctr: "2.5",
-    status: "testing" as AdStatus,
-  });
+  const [dataOpen, setDataOpen] = useState(false);
+  const [entryGroup, setEntryGroup] = useState("exp-tumbler");
+  const [linkFilter, setLinkFilter] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, EntryDraft>>({});
+  const [preview, setPreview] = useState<AdRecord | null>(null);
+  const [compare, setCompare] = useState<[AdRecord, AdRecord] | null>(null);
 
   useEffect(() => {
     setProductId(productFromUrl);
   }, [productFromUrl]);
+
+  const experiments = useMemo(() => {
+    const list: { id: string; label: string; rows: AdRecord[] }[] = [];
+    ads.forEach((item) => {
+      const found = list.find((group) => group.id === item.experimentId);
+      if (found) found.rows.push(item);
+      else list.push({ id: item.experimentId, label: "", rows: [item] });
+    });
+    return list.map((group) => {
+      const sorted = [...group.rows].sort((a, b) => a.variant.localeCompare(b.variant));
+      const phase = sorted[0].experimentName.split(" - ").slice(1).join(" - ") || "前 3 秒钩子对决赛马";
+      return {
+        id: group.id,
+        rows: sorted,
+        label: `${sorted[0].productTitle} (${phase} · ${sorted.length}条变体)`,
+      };
+    });
+  }, [ads]);
+
+  const visibleExperiments = useMemo(() => {
+    const q = linkFilter.trim().toLowerCase();
+    if (!q) return experiments;
+    return experiments.filter((item) => item.label.toLowerCase().includes(q) || item.rows.some((row) => `${row.productTitle} ${row.productId}`.toLowerCase().includes(q)));
+  }, [experiments, linkFilter]);
+
+  const activeExperiment = experiments.find((item) => item.id === entryGroup) ?? visibleExperiments[0];
+
+  useEffect(() => {
+    if (!dataOpen || !activeExperiment) return;
+    const next: Record<string, EntryDraft> = {};
+    activeExperiment.rows.forEach((row) => {
+      next[row.id] = { spend: String(row.spend), ctr: String(row.ctr), roas: String(row.roas), status: row.status };
+    });
+    setDrafts(next);
+  }, [dataOpen, activeExperiment]);
+
+  const winRate = useMemo(() => {
+    const groups = new Map<string, AdRecord[]>();
+    ads.forEach((item) => {
+      const current = groups.get(item.experimentId) ?? [];
+      current.push(item);
+      groups.set(item.experimentId, current);
+    });
+    const liveWins = [...groups.values()].filter((rows) => rows.some(isQualifiedWinner)).length;
+    const total = groups.size + HISTORICAL_GROUPS;
+    const wins = liveWins + HISTORICAL_WINS;
+    const rate = total ? ((wins / total) * 100).toFixed(1) : "0.0";
+    return { total, wins, rate };
+  }, [ads]);
 
   const rows = useMemo(() => {
     return ads.filter((item) => {
@@ -76,44 +138,44 @@ function AnalyticsBoard() {
     return order;
   }, [rows]);
 
-  const submit = () => {
-    const product = products.find((item) => item.id === draft.productId);
-    const historyItem = history.find((item) => item.id === draft.historyId);
-    const hook = MATRIX_HOOKS.find((item) => item.id === draft.hookId);
-    const template = WORKFLOW_TEMPLATES.find((item) => item.id === draft.templateId);
-    if (!product || !hook || !template) return;
-    if (!historyItem && !externalVideo) {
-      pushToast("请选择已渲染视频，或上传一条外部 MP4", "warning");
+  const saveMetrics = (id: string, patch: Partial<Pick<AdRecord, "spend" | "ctr" | "roas">>) => {
+    updateAdMetrics(id, patch);
+    pushToast("投放数据已更新", "success");
+  };
+
+  const submitEntry = () => {
+    if (!activeExperiment) {
+      pushToast("请先选择一组赛马实验", "warning");
       return;
     }
-    const videoUrl = externalVideo || historyItem?.videoUrl || product.images[0];
-    addAdRecord({
-      id: `ad-${Date.now()}`,
-      title: draft.title.trim() || historyItem?.title || `${product.title} 回传`,
-      posterUrl: historyItem?.posterUrl || product.images[0],
-      videoUrl,
-      productId: product.id,
-      productTitle: product.title,
-      hookId: hook.id,
-      hookLabel: hook.name,
-      templateId: template.id,
-      templateLabel: template.name,
-      channel: draft.channel,
-      spend: Number(draft.spend) || 0,
-      ctr: Number(draft.ctr) || 0,
-      roas: 1,
-      status: draft.status,
-      script: {
-        hook: hook.line,
-        demo: product.sellingPoints,
-        cta: "沿用胜出版本的价格锚点",
-      },
-      experimentId: `exp-${product.id}`,
-      experimentName: `${product.title} - 前 3 秒钩子对决赛马`,
-      variant: draft.hookId === "b" ? "B" : draft.hookId === "c" ? "C" : "A",
+    const parsed = activeExperiment.rows.map((row) => {
+      const draft = drafts[row.id];
+      return {
+        row,
+        spend: Number(draft?.spend),
+        ctr: Number(draft?.ctr),
+        roas: Number(draft?.roas),
+        status: draft?.status ?? row.status,
+      };
     });
-    pushToast("投放数据已回传", "success");
-    setUploadOpen(false);
+    if (parsed.some((item) => ![item.spend, item.ctr, item.roas].every((value) => Number.isFinite(value)))) {
+      pushToast("请把每条变体的消耗、CTR 和 ROAS 填完整", "warning");
+      return;
+    }
+    const winner = [...parsed].sort((a, b) => b.ctr - a.ctr || b.roas - a.roas)[0];
+    parsed.forEach((item) => {
+      const status = item.row.id === winner.row.id ? "winner" : item.status === "winner" ? "testing" : item.status;
+      updateAdMetrics(item.row.id, { spend: item.spend, ctr: item.ctr, roas: item.roas, status });
+    });
+    pushToast(`已保存，Hook ${winner.row.variant} 标为胜出版本`, "success");
+    setDataOpen(false);
+  };
+
+  const openCompare = (item: AdRecord) => {
+    const siblings = ads.filter((ad) => ad.experimentId === item.experimentId);
+    const left = siblings.find((ad) => ad.variant === "A") ?? item;
+    const right = siblings.find((ad) => ad.variant === "B" && ad.id !== left.id) ?? siblings.find((ad) => ad.id !== left.id) ?? item;
+    setCompare([left, right]);
   };
 
   return (
@@ -126,7 +188,11 @@ function AnalyticsBoard() {
           </div>
           <button
             type="button"
-            onClick={() => setUploadOpen(true)}
+            onClick={() => {
+              setEntryGroup(experiments[0]?.id ?? "exp-tumbler");
+              setLinkFilter("");
+              setDataOpen(true);
+            }}
             className="h-10 rounded-xl bg-brand px-4 text-sm font-medium text-white shadow-glow"
           >
             手动回传投放视频与数据
@@ -138,13 +204,27 @@ function AnalyticsBoard() {
             ["累计测试素材", `${ANALYTICS_SUMMARY.tested} 条`],
             ["平均 CTR", ANALYTICS_SUMMARY.ctr],
             ["跑量爆款素材数", `${ANALYTICS_SUMMARY.winners} 条`],
-            ["A/B 测试胜出率", ANALYTICS_SUMMARY.winRate],
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-card">
               <p className="text-xs text-slate-400">{label}</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
             </div>
           ))}
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-card">
+            <div className="flex items-center gap-1 text-xs text-slate-400">
+              <span>A/B 测试胜出率</span>
+              <span className="group relative">
+                <Info className="h-3.5 w-3.5" />
+                <span className="pointer-events-none absolute left-0 top-5 z-10 hidden w-56 rounded-xl bg-ink px-3 py-2 text-[11px] leading-5 text-white shadow-pop group-hover:block">
+                  当某个变体 CTR 超过行业基准 2.5% 且 ROAS &gt; 2.0 时被标记为胜出版本
+                </span>
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-semibold tracking-tight">{winRate.rate}%</p>
+            <p className="mt-1 text-[11px] leading-5 text-slate-400">
+              总共 {winRate.total} 组赛马，{winRate.wins} 组成功跑出胜出版 (胜出率 {winRate.rate}%)
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -195,75 +275,104 @@ function AnalyticsBoard() {
           <h2 className="text-sm font-medium">A/B 测赛马实验组</h2>
           {groups.map((group) => {
             const best = Math.max(...group.rows.map((item) => item.ctr));
+            const product = products.find((item) => item.id === group.rows[0]?.productId);
+            const qualified = [...group.rows].filter(isQualifiedWinner).sort((a, b) => b.ctr - a.ctr)[0];
             return (
               <section key={group.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card">
-                <div className="border-b border-slate-100 px-4 py-3">
-                  <p className="text-sm font-medium">{group.name}</p>
-                  <p className="mt-1 text-xs text-slate-400">同一商品、同一段演示，只对比前 3 秒钩子。</p>
+                <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+                  <img
+                    src={product?.images[0] ?? group.rows[0]?.posterUrl}
+                    alt=""
+                    className="h-20 w-20 rounded-2xl object-cover"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{group.name}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">{product?.categoryTag ?? product?.category ?? "未分类"}</span>
+                      <span className="text-slate-400">{GROUP_DATE[group.id] ?? "2026-10-02"}</span>
+                      <span className={cn("rounded-full px-2 py-0.5", qualified ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                        {qualified ? `🟢 赛马已完成: Hook ${qualified.variant} 胜出` : "🟡 赛马进行中"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-xs text-slate-400">
-                    <tr>
-                      <th className="px-3 py-3 font-medium">视频</th>
-                      <th className="px-3 py-3 font-medium">关联商品</th>
-                      <th className="px-3 py-3 font-medium">钩子变体</th>
-                      <th className="px-3 py-3 font-medium">渠道</th>
-                      <th className="px-3 py-3 font-medium">消耗</th>
-                      <th className="px-3 py-3 font-medium">CTR</th>
-                      <th className="px-3 py-3 font-medium">ROAS</th>
-                      <th className="px-3 py-3 font-medium">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.rows.map((item) => {
-                      const winner = item.ctr === best;
-                      const ctrLabel = Number.isInteger(item.ctr * 10) ? item.ctr.toFixed(1) : item.ctr.toFixed(2);
-                      return (
-                        <tr key={item.id} className="border-t border-slate-50">
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-3">
-                              <img src={item.posterUrl} alt="" className="h-14 w-10 rounded-lg object-cover" />
-                              <div>
-                                <p className="max-w-[180px] font-medium">{item.title}</p>
-                                <p className="text-[11px] text-slate-400">{STATUS_LABEL[item.status]}</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[880px] text-left text-sm">
+                    <thead className="bg-slate-50 text-xs text-slate-400">
+                      <tr>
+                        <th className="px-3 py-3 font-medium">视频</th>
+                        <th className="px-3 py-3 font-medium">关联商品</th>
+                        <th className="px-3 py-3 font-medium">钩子变体</th>
+                        <th className="px-3 py-3 font-medium">渠道</th>
+                        <th className="px-3 py-3 font-medium">消耗</th>
+                        <th className="px-3 py-3 font-medium">CTR</th>
+                        <th className="px-3 py-3 font-medium">ROAS</th>
+                        <th className="px-3 py-3 font-medium">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.rows.map((item) => {
+                        const winner = item.ctr === best;
+                        return (
+                          <tr key={item.id} className="border-t border-slate-50">
+                            <td className="px-3 py-3">
+                              <div className="flex items-center gap-3">
+                                <img src={item.posterUrl} alt="" className="h-14 w-10 rounded-lg object-cover" />
+                                <div>
+                                  <p className="max-w-[180px] font-medium">{item.title}</p>
+                                  <p className="text-[11px] text-slate-400">{STATUS_LABEL[item.status]}</p>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-slate-600">{item.productTitle}</td>
-                          <td className="px-3 py-3 text-xs text-slate-600">
-                            Variant {item.variant} ({item.hookLabel})
-                            {winner ? <span className="mt-1 block font-medium text-amber-600">👑 胜出版本</span> : null}
-                          </td>
-                          <td className="px-3 py-3 text-xs">{item.channel}</td>
-                          <td className="px-3 py-3">${item.spend.toLocaleString("en-US")}</td>
-                          <td className="px-3 py-3">
-                            <span className={cn("rounded-full px-2 py-0.5 text-xs", item.ctr > 3 ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-500")}>
-                              {ctrLabel}%{item.ctr > 3 ? " 🔥 高点击" : ""}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3">{item.roas.toFixed(1)}</td>
-                          <td className="px-3 py-3">
-                            <div className="flex flex-col items-start gap-1">
-                              <button type="button" onClick={() => setCompare(item)} className="text-xs text-slate-600 hover:text-brand">
-                                查看对比
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  prepareBatchFromAd(item);
-                                  router.push("/studio/batch");
-                                }}
-                                className="text-left text-xs text-brand"
-                              >
-                                ⚡️ 基于此胜出版本再裂变
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                            <td className="px-3 py-3 text-slate-600">{item.productTitle}</td>
+                            <td className="px-3 py-3 text-xs text-slate-600">
+                              Variant {item.variant} ({item.hookLabel})
+                              {winner ? <span className="mt-1 block font-medium text-amber-600">👑 胜出版本</span> : null}
+                            </td>
+                            <td className="px-3 py-3 text-xs">{item.channel}</td>
+                            <td className="px-3 py-3">${item.spend.toLocaleString("en-US")}</td>
+                            <td className="px-3 py-3">
+                              <EditableMetric
+                                value={item.ctr}
+                                format={(value) => `${Number.isInteger(value * 10) ? value.toFixed(1) : value.toFixed(2)}%`}
+                                hot={item.ctr > 3}
+                                onSave={(value) => saveMetrics(item.id, { ctr: value })}
+                              />
+                            </td>
+                            <td className="px-3 py-3">
+                              <EditableMetric
+                                value={item.roas}
+                                format={(value) => value.toFixed(1)}
+                                onSave={(value) => saveMetrics(item.id, { roas: value })}
+                              />
+                            </td>
+                            <td className="px-3 py-3">
+                              <div className="flex flex-col items-start gap-1">
+                                <button type="button" onClick={() => setPreview(item)} className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-brand">
+                                  <Eye className="h-3.5 w-3.5" />
+                                  预览视频
+                                </button>
+                                <button type="button" onClick={() => openCompare(item)} className="text-xs text-slate-600 hover:text-brand">
+                                  查看对比
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    prepareBatchFromAd(item);
+                                    router.push("/studio/batch");
+                                  }}
+                                  className="text-left text-xs text-brand"
+                                >
+                                  ⚡️ 基于此胜出版本再裂变
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </section>
             );
           })}
@@ -271,120 +380,103 @@ function AnalyticsBoard() {
         </div>
       </div>
 
-      <Dialog.Root open={uploadOpen} onOpenChange={setUploadOpen}>
+      <Dialog.Root open={dataOpen} onOpenChange={setDataOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[min(520px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-white p-5 shadow-pop focus:outline-none">
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[min(860px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-white p-5 shadow-pop focus:outline-none">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <Dialog.Title className="text-base font-semibold">📊 回传赛马实验投放数据</Dialog.Title>
+                <Dialog.Description className="mt-1 text-xs leading-5 text-slate-400">
+                  选择对应商品，系统会自动调出该组生成的赛马视频，直接填入广告后台表现。
+                </Dialog.Description>
+              </div>
+              <Dialog.Close className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <X className="h-4 w-4" />
+              </Dialog.Close>
+            </div>
+            <div className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-[1fr_220px]">
+                <label className="block text-sm">
+                  <span className="mb-1 block text-xs text-slate-400">选择赛马商品 / 实验批次</span>
+                  <select
+                    value={activeExperiment?.id ?? ""}
+                    onChange={(event) => setEntryGroup(event.target.value)}
+                    className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                  >
+                    {(visibleExperiments.length ? visibleExperiments : experiments).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block text-xs text-slate-400">商品链接筛选</span>
+                  <input
+                    value={linkFilter}
+                    onChange={(event) => setLinkFilter(event.target.value)}
+                    placeholder="粘贴商品链接或名称"
+                    className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none"
+                  />
+                </label>
+              </div>
+              <div className="space-y-2">
+                {activeExperiment?.rows.map((row) => {
+                  const draft = drafts[row.id] ?? { spend: String(row.spend), ctr: String(row.ctr), roas: String(row.roas), status: row.status };
+                  const hookName = row.hookLabel.replace(/^Hook\s*[A-C]\s*/, "");
+                  const patch = (partial: Partial<EntryDraft>) => setDrafts((current) => ({ ...current, [row.id]: { ...draft, ...partial } }));
+                  return (
+                    <div key={row.id} className="grid grid-cols-[72px_1fr] gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+                      <div className="relative h-[96px] overflow-hidden rounded-xl bg-slate-200">
+                        <img src={row.posterUrl} alt="" className="h-full w-full object-cover" />
+                        <span className="absolute bottom-1 left-1 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] text-white">15s</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">
+                          Hook {row.variant} · {hookName}
+                        </p>
+                        <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                          <Field label="消耗 ($)" value={draft.spend} onChange={(value) => patch({ spend: value })} />
+                          <Field label="CTR (%)" value={draft.ctr} onChange={(value) => patch({ ctr: value })} />
+                          <Field label="ROAS" value={draft.roas} onChange={(value) => patch({ roas: value })} />
+                          <label className="block">
+                            <span className="mb-1 block text-[11px] text-slate-400">状态</span>
+                            <select
+                              value={draft.status}
+                              onChange={(event) => patch({ status: event.target.value as AdStatus })}
+                              className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs"
+                            >
+                              <option value="winner">跑量爆单</option>
+                              <option value="testing">保本测试中</option>
+                              <option value="stopped">跑输停投</option>
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button type="button" onClick={submitEntry} className="h-10 w-full rounded-xl bg-brand text-sm font-medium text-white">
+                ⚡️ 保存数据并决出胜出版
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <Dialog.Root open={Boolean(preview)} onOpenChange={(next) => !next && setPreview(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(360px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-5 shadow-pop focus:outline-none">
             <div className="mb-3 flex items-start justify-between">
-              <Dialog.Title className="text-base font-semibold">回传投放视频与数据</Dialog.Title>
+              <Dialog.Title className="text-base font-semibold">{preview?.title}</Dialog.Title>
               <Dialog.Close className="rounded-lg p-1 text-slate-400">
                 <X className="h-4 w-4" />
               </Dialog.Close>
             </div>
-            <Dialog.Description className="mb-3 text-xs text-slate-400">上传外部 MP4，或选择一条已生成的成片，再补上消耗、点击率和状态。</Dialog.Description>
-            <div className="space-y-3 text-sm">
-              <label className="flex h-16 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-400">
-                {externalVideo ? "已选择外部 MP4" : "上传外部 MP4"}
-                <input
-                  hidden
-                  type="file"
-                  accept="video/mp4,video/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    setExternalVideo(URL.createObjectURL(file));
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-              <select
-                value={draft.historyId}
-                onChange={(event) => setDraft({ ...draft, historyId: event.target.value })}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3"
-              >
-                <option value="">选择已渲染视频</option>
-                {history
-                  .filter((item) => item.status === "completed")
-                  .map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.title}
-                    </option>
-                  ))}
-              </select>
-              <input
-                value={draft.title}
-                onChange={(event) => setDraft({ ...draft, title: event.target.value })}
-                placeholder="对外标题，可留空"
-                className="h-10 w-full rounded-xl border border-slate-200 px-3"
-              />
-              <select
-                value={draft.productId}
-                onChange={(event) => setDraft({ ...draft, productId: event.target.value })}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3"
-              >
-                {products.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={draft.hookId}
-                onChange={(event) => setDraft({ ...draft, hookId: event.target.value })}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3"
-              >
-                {MATRIX_HOOKS.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={draft.templateId}
-                onChange={(event) => setDraft({ ...draft, templateId: event.target.value })}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3"
-              >
-                {WORKFLOW_TEMPLATES.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={draft.channel}
-                onChange={(event) => setDraft({ ...draft, channel: event.target.value as AdRecord["channel"] })}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3"
-              >
-                <option>TikTok Ads</option>
-                <option>千川</option>
-              </select>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  value={draft.spend}
-                  onChange={(event) => setDraft({ ...draft, spend: event.target.value })}
-                  placeholder="消耗 $"
-                  className="h-10 rounded-xl border border-slate-200 px-3"
-                />
-                <input
-                  value={draft.ctr}
-                  onChange={(event) => setDraft({ ...draft, ctr: event.target.value })}
-                  placeholder="CTR %"
-                  className="h-10 rounded-xl border border-slate-200 px-3"
-                />
-              </div>
-              <select
-                value={draft.status}
-                onChange={(event) => setDraft({ ...draft, status: event.target.value as AdStatus })}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3"
-              >
-                <option value="testing">保本测试中</option>
-                <option value="winner">跑量爆单</option>
-                <option value="stopped">跑输停投</option>
-              </select>
-              <button type="button" onClick={submit} className="h-10 w-full rounded-xl bg-brand font-medium text-white">
-                写入看板
-              </button>
-            </div>
+            {preview ? <MockPlayer ad={preview} /> : null}
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
@@ -392,18 +484,32 @@ function AnalyticsBoard() {
       <Dialog.Root open={Boolean(compare)} onOpenChange={(next) => !next && setCompare(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(640px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-5 shadow-pop focus:outline-none">
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(760px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-5 shadow-pop focus:outline-none">
             <div className="mb-3 flex items-start justify-between">
-              <Dialog.Title className="text-base font-semibold">查看对比</Dialog.Title>
+              <Dialog.Title className="text-base font-semibold">钩子对比</Dialog.Title>
               <Dialog.Close className="rounded-lg p-1 text-slate-400">
                 <X className="h-4 w-4" />
               </Dialog.Close>
             </div>
             {compare ? (
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <CompareCell title={compare.title} ctr={`${compare.ctr.toFixed(2)}%`} spend={`$${compare.spend}`} roas={compare.roas.toFixed(1)} />
-                <CompareCell title="账户均值" ctr={ANALYTICS_SUMMARY.ctr} spend="—" roas="—" />
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  {compare.map((item) => (
+                    <div key={item.id}>
+                      <p className="mb-2 text-sm font-medium">
+                        Variant {item.variant} · {item.hookLabel}
+                      </p>
+                      <MockPlayer ad={item} />
+                      <p className="mt-2 text-xs text-slate-400">
+                        CTR {item.ctr}% · ROAS {item.roas.toFixed(1)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 rounded-xl bg-brand-soft px-3 py-2 text-sm text-brand-ink">
+                  前 3 秒钩子差异对完播率的影响 ({formatBoost(compare[0], compare[1])})
+                </p>
+              </>
             ) : null}
           </Dialog.Content>
         </Dialog.Portal>
@@ -412,14 +518,93 @@ function AnalyticsBoard() {
   );
 }
 
-function CompareCell({ title, ctr, spend, roas }: { title: string; ctr: string; spend: string; roas: string }) {
+function formatBoost(left: AdRecord, right: AdRecord) {
+  const low = Math.min(left.ctr, right.ctr);
+  const high = Math.max(left.ctr, right.ctr);
+  const boost = low > 0 ? Math.round(((high - low) / low) * 100) : 170;
+  return `+${boost}% CTR boost`;
+}
+
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <div className="rounded-2xl border border-slate-100 p-4">
-      <p className="font-medium">{title}</p>
-      <p className="mt-3 text-xs text-slate-400">CTR</p>
-      <p className="text-lg font-semibold">{ctr}</p>
-      <p className="mt-2 text-xs text-slate-400">消耗 {spend}</p>
-      <p className="text-xs text-slate-400">ROAS {roas}</p>
+    <label className="block">
+      <span className="mb-1 block text-[11px] text-slate-400">{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm outline-none"
+      />
+    </label>
+  );
+}
+
+function MockPlayer({ ad }: { ad: AdRecord }) {
+  return (
+    <div className="overflow-hidden rounded-2xl bg-slate-950">
+      <video src={ad.videoUrl} poster={ad.posterUrl} controls playsInline className="aspect-[9/16] w-full object-cover" />
     </div>
+  );
+}
+
+function EditableMetric({
+  value,
+  format,
+  hot,
+  onSave,
+}: {
+  value: number;
+  format: (value: number) => string;
+  hot?: boolean;
+  onSave: (value: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const commit = (raw: string) => {
+    const next = Number(raw);
+    setEditing(false);
+    if (!Number.isFinite(next)) {
+      setDraft(String(value));
+      return;
+    }
+    setDraft(String(next));
+    if (next !== value) onSave(next);
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={(event) => commit(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commit(event.currentTarget.value);
+          }
+          if (event.key === "Escape") {
+            setDraft(String(value));
+            setEditing(false);
+          }
+        }}
+        className="h-8 w-20 rounded-lg border border-brand px-2 text-sm outline-none"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className={cn("rounded-full px-2 py-0.5 text-xs transition hover:ring-2 hover:ring-brand/30", hot ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-600")}
+    >
+      {format(value)}
+      {hot ? " 🔥 高点击" : ""}
+    </button>
   );
 }

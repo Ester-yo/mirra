@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Download, FolderOpen, Link2, Loader2, Lock, Package, Play, Upload, X } from "lucide-react";
+import { Bot, Check, Download, FolderOpen, Link2, Loader2, Lock, Package, Play, Plus, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { PreviewModal } from "@/components/modals/PreviewModal";
 import { ProPaywallModal } from "@/components/modals/ProPaywallModal";
@@ -57,6 +57,8 @@ export default function BatchPage() {
   const parseProductLink = useCreationStore((state) => state.parseProductLink);
   const focusBodyTemplate = useCreationStore((state) => state.focusBodyTemplate);
   const toggleHookId = useCreationStore((state) => state.toggleHookId);
+  const extraHooks = useCreationStore((state) => state.extraHooks);
+  const appendHooks = useCreationStore((state) => state.appendHooks);
   const prepareBatchFromProduct = useCreationStore((state) => state.prepareBatchFromProduct);
   const pushToast = useCreationStore((state) => state.pushToast);
 
@@ -69,6 +71,16 @@ export default function BatchPage() {
   const [jobs, setJobs] = useState<QueueItem[]>(SEED_QUEUE);
   const [preview, setPreview] = useState<QueueItem | null>(null);
   const [catalogQuery, setCatalogQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [expanding, setExpanding] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customText, setCustomText] = useState("");
+
+  const allHooks = [...MATRIX_HOOKS, ...extraHooks];
+  const templateFilters = ["all", "美妆个护", "服装穿搭", "3C 数码", "家居日用"] as const;
+  const visibleTemplates = WORKFLOW_TEMPLATES.filter(
+    (item) => selectedCategory === "all" || item.categories.includes(selectedCategory),
+  );
 
   useEffect(() => {
     if (productLink && !productLink.startsWith("library://")) setLink(productLink);
@@ -181,7 +193,7 @@ export default function BatchPage() {
     const combos = templates.flatMap((templateId) =>
       hooks.map((hookId) => {
         const template = WORKFLOW_TEMPLATES.find((item) => item.id === templateId);
-        const hook = MATRIX_HOOKS.find((item) => item.id === hookId);
+        const hook = allHooks.find((item) => item.id === hookId);
         return {
           id: `q-${templateId}-${hookId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
           title: `${hook?.name.split(":")[0] ?? hookId} + ${template?.name ?? templateId}`,
@@ -398,12 +410,31 @@ export default function BatchPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-card">
-          <h2 className="text-sm font-medium">官方工作流模板</h2>
-          <p className="mt-1 text-xs text-slate-400">
-            {batchMode === "catalog" ? "套版模式只应用 1 个模板。" : "选定 1 个主体模板，悬停卡片可静音预览。"}
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {WORKFLOW_TEMPLATES.map((item) => {
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-medium">官方工作流模板</h2>
+              <p className="mt-1 text-xs text-slate-400">
+                {batchMode === "catalog" ? "套版模式只应用 1 个模板。" : "选定 1 个主体模板，悬停卡片可静音预览。"}
+              </p>
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
+              className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs"
+            >
+              {templateFilters.map((id) => {
+                const count = id === "all" ? WORKFLOW_TEMPLATES.length : WORKFLOW_TEMPLATES.filter((item) => item.categories.includes(id)).length;
+                const label = id === "all" ? "全部" : id;
+                return (
+                  <option key={id} value={id}>
+                    {label} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div className="mt-3 grid grid-cols-4 gap-3.5 lg:grid-cols-5">
+            {visibleTemplates.map((item) => {
               const on = batchMode === "catalog" ? unifiedTemplateId === item.id : templates.includes(item.id);
               return (
                 <WorkflowCard
@@ -415,11 +446,47 @@ export default function BatchPage() {
               );
             })}
           </div>
+          {visibleTemplates.length === 0 ? <p className="mt-3 text-sm text-slate-400">这个类目下还没有模板</p> : null}
           {batchMode === "hooks" ? (
           <>
-          <h2 className="mt-5 text-sm font-medium">前 3 秒黄金钩子裂变</h2>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-medium">前 3 秒黄金钩子裂变</h2>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={expanding}
+                onClick={() => {
+                  if (extraHooks.some((item) => item.id === "d")) {
+                    pushToast("新钩子已经在列表里了", "warning");
+                    return;
+                  }
+                  setExpanding(true);
+                  window.setTimeout(() => {
+                    appendHooks([
+                      { id: "d", name: "Hook D: 价格锚点暴击流", detail: "Price Anchor", line: "Same product. Half the price of the one sitting in your cart." },
+                      { id: "e", name: "Hook E: 街头路人盲测挑战", detail: "Street Blind Test", line: "We stopped 12 people. None of them guessed the price." },
+                    ]);
+                    setExpanding(false);
+                    pushToast("已扩写 2 条新钩子", "success");
+                  }, 700);
+                }}
+                className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 px-2.5 text-xs disabled:opacity-60"
+              >
+                {expanding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+                {expanding ? "生成中..." : "AI 智能扩写钩子"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomOpen((value) => !value)}
+                className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 px-2.5 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                自定义钩子
+              </button>
+            </div>
+          </div>
           <div className="mt-3 grid gap-2 md:grid-cols-3">
-            {MATRIX_HOOKS.map((item) => {
+            {allHooks.map((item) => {
               const on = hooks.includes(item.id);
               return (
                 <button
@@ -445,6 +512,39 @@ export default function BatchPage() {
               );
             })}
           </div>
+          {customOpen ? (
+            <form
+              className="mt-3 flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const text = customText.trim();
+                if (!text) {
+                  pushToast("先写一句前 3 秒钩子", "warning");
+                  return;
+                }
+                appendHooks([
+                  {
+                    id: `custom-${Date.now()}`,
+                    name: `自定义: ${text.slice(0, 12)}`,
+                    detail: "Custom Hook",
+                    line: text,
+                  },
+                ]);
+                setCustomText("");
+                pushToast("自定义钩子已加入", "success");
+              }}
+            >
+              <input
+                value={customText}
+                onChange={(event) => setCustomText(event.target.value)}
+                placeholder="写下前 3 秒钩子脚本，回车添加"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 text-sm outline-none"
+              />
+              <button type="submit" className="h-10 rounded-xl bg-ink px-4 text-sm text-white">
+                添加
+              </button>
+            </form>
+          ) : null}
           <p className="mt-4 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
             💡 当前矩阵配置：{productCount}个商品 × {templates.length}个模板 × {hooks.length}个钩子 = 将并发生成 {total} 条前 3 秒钩子赛马素材
           </p>
@@ -615,7 +715,7 @@ function WorkflowCard({
         video.currentTime = 0;
       }}
     >
-      <div className="relative aspect-[9/16] bg-slate-100">
+      <div className="relative aspect-[9/16] max-h-[168px] w-full overflow-hidden bg-slate-100">
         <img src={item.posterUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:opacity-0" />
         <video
           ref={videoRef}
@@ -627,27 +727,30 @@ function WorkflowCard({
           preload="metadata"
           className="absolute inset-0 h-full w-full object-cover opacity-0 transition group-hover:opacity-100"
         />
-        <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white transition group-hover:opacity-0">
+        <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white transition group-hover:opacity-0">
           <Play className="ml-0.5 h-4 w-4 fill-white" />
         </span>
-        <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white">{item.duration}</span>
+        <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">{item.duration}</span>
         <button
           type="button"
           onClick={onToggle}
           aria-label={checked ? "取消选择模板" : "选择模板"}
           className={cn(
-            "absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md border bg-white",
+            "absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-md border bg-white",
             checked ? "border-brand bg-brand text-white" : "border-slate-200 text-transparent",
           )}
         >
-          <Check className="h-3.5 w-3.5" />
+          <Check className="h-3 w-3" />
         </button>
       </div>
-      <div className="space-y-1 p-3">
-        <p className="text-sm font-medium">
+      <div className="space-y-0.5 px-2 py-1.5">
+        <p className="line-clamp-1 text-xs font-semibold">
           {item.emoji} {item.name}
         </p>
-        <p className="text-[11px] font-medium text-emerald-600">【{item.reliability}】</p>
+        <p className="line-clamp-1 text-[11px] text-slate-400">
+          {item.categories.join(" / ")} · {item.aspect}
+          <span className="font-medium text-emerald-600"> 【{item.reliability}】</span>
+        </p>
       </div>
     </div>
   );

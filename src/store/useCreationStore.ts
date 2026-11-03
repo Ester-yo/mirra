@@ -19,6 +19,7 @@ import type {
   AspectRatio,
   BatchJob,
   HistoryItem,
+  HookOption,
   LibraryProduct,
   ProductMeta,
   RemixTemplate,
@@ -56,6 +57,7 @@ type CreationState = {
   ads: AdRecord[];
   selectedTemplateIds: string[];
   selectedHookIds: string[];
+  extraHooks: HookOption[];
   batchScript: ScriptBreakdown | null;
   activeProductId: string | null;
   currentProductForStudio: LibraryProduct | null;
@@ -92,6 +94,10 @@ type CreationState = {
   setKeyframe: (index: number, url: string) => void;
   setRegion: (value: "US" | "UK") => void;
   addLibraryProduct: (product: LibraryProduct) => void;
+  updateLibraryProduct: (product: LibraryProduct) => void;
+  removeLibraryProduct: (id: string) => void;
+  updateAdMetrics: (id: string, patch: Partial<Pick<AdRecord, "spend" | "ctr" | "roas" | "status">>) => void;
+  appendHooks: (hooks: HookOption[]) => void;
   loadProductIntoRemix: (product: LibraryProduct) => void;
   prepareBatchFromProduct: (product: LibraryProduct) => void;
   setBatchMode: (mode: "hooks" | "catalog") => void;
@@ -170,6 +176,7 @@ export const useCreationStore = create<CreationState>((set, get) => ({
   ads: SEED_ADS,
   selectedTemplateIds: ["street"],
   selectedHookIds: ["a", "b", "c"],
+  extraHooks: [],
   batchScript: null,
   activeProductId: null,
   currentProductForStudio: null,
@@ -258,6 +265,27 @@ export const useCreationStore = create<CreationState>((set, get) => ({
   },
   setRegion: (value) => set({ region: value }),
   addLibraryProduct: (product) => set({ products: [product, ...get().products] }),
+  updateLibraryProduct: (product) =>
+    set({
+      products: get().products.map((item) => (item.id === product.id ? product : item)),
+      currentProductForStudio: get().currentProductForStudio?.id === product.id ? product : get().currentProductForStudio,
+    }),
+  removeLibraryProduct: (id) =>
+    set({
+      products: get().products.filter((item) => item.id !== id),
+      currentProductForStudio: get().currentProductForStudio?.id === id ? null : get().currentProductForStudio,
+      selectedBatchProductIds: get().selectedBatchProductIds.filter((item) => item !== id),
+    }),
+  updateAdMetrics: (id, patch) =>
+    set({
+      ads: get().ads.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    }),
+  appendHooks: (hooks) => {
+    const existing = new Set(get().extraHooks.map((item) => item.id));
+    const fresh = hooks.filter((item) => !existing.has(item.id));
+    if (!fresh.length) return;
+    set({ extraHooks: [...get().extraHooks, ...fresh] });
+  },
   loadProductIntoRemix: (product) => {
     const current = get().currentTemplate;
     set({

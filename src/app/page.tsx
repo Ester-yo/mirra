@@ -1,5 +1,12 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function HomePage() {
-  redirect("/inspiration");
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/inspiration");
+  }, [router]);
+  return null;
 }
