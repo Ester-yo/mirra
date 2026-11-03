@@ -1,0 +1,69 @@
+404.html
+  s_c6b7b75a12e31b::t_a82b7ee5f53079 1
+404/index.html
+  s_c6b7b75a12e31b::t_0b005d12a98f4b 1
+_next/static/chunks/297-c0e0314d02bcfd0a.js
+  s_c6b7b75a12e31b::t_6d61a108647c3f 1
+_next/static/chunks/860-9d635d4c8f0aea32.js
+  s_c6b7b75a12e31b::t_93f894d909b088 1
+_next/static/chunks/app/analytics/page-101ab1b938528f16.js
+  s_c6b7b75a12e31b::t_36e4bde0e871e4 1
+_next/static/chunks/app/history/page-4f9992bdf00e48d8.js
+  s_c6b7b75a12e31b::t_33598143118581 1
+_next/static/chunks/app/inspiration/page-1b982d62053c9288.js
+  s_c6b7b75a12e31b::t_8ba0a209b7de18 1
+_next/static/chunks/app/layout-47194a35510dd317.js
+  s_c6b7b75a12e31b::t_9d61f1adef51d4 1
+_next/static/chunks/app/products/page-c12e749ffd14a1f3.js
+  s_c6b7b75a12e31b::t_ab4345762cfc88 1
+_next/static/chunks/app/studio/batch/page-688573d283b72f8b.js
+  s_c6b7b75a12e31b::t_861de3ae360757 1
+_next/static/chunks/app/studio/remix/page-0ad638afe6676a5a.js
+  s_c6b7b75a12e31b::t_e30ad611ff9242 1
+_next/static/css/be0cd2e1c82a7967.css
+  s_c6b7b75a12e31b::t_48fbda61d3aa4f 3
+analytics/index.html
+  s_c6b7b75a12e31b::t_a1887a214dad99 1
+analytics/index.txt
+  s_c6b7b75a12e31b::t_d2a2050de3e56c 2,7,14-15
+history/index.html
+  s_c6b7b75a12e31b::t_963f9de563a462 1
+history/index.txt
+  s_c6b7b75a12e31b::t_8396d6bd894911 2,7,14-15
+index.html
+  s_c6b7b75a12e31b::t_4059e298306cfc 1
+index.txt
+  s_c6b7b75a12e31b::t_f320b2f2cf6d06 2,14-15
+inspiration/index.html
+  s_c6b7b75a12e31b::t_c2084109344051 1
+inspiration/index.txt
+  s_c6b7b75a12e31b::t_835291c6c3a5af 2,7,14-15
+products/index.html
+  s_c6b7b75a12e31b::t_a45d1c6a677e0c 1
+products/index.txt
+  s_c6b7b75a12e31b::t_38119e10015cd4 2,7,14-15
+studio/batch/index.html
+  s_c6b7b75a12e31b::t_f2860c543c545d 1
+studio/batch/index.txt
+  s_c6b7b75a12e31b::t_c6de1b3dfd2eaf 2,7,14-15
+studio/remix/index.html
+  s_c6b7b75a12e31b::t_9c2a8ecdf674a6 1
+studio/remix/index.txt
+  s_c6b7b75a12e31b::t_5ae67a877c7dfe 2,7,14-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "49c64c8625b36044bb5cd249081fe59521ea1682",
+  "prompts": {},
+  "sessions": {
+    "s_c6b7b75a12e31b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9ca892e9-86cd-4bb7-a8a4-bda58aff1a20",
+        "model": "grok-4.7"
+      },
+      "human_author": "Ester-yo <tabithahunterpipersa213421@gmail.com>"
+    }
+  }
+}
