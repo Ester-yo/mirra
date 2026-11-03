@@ -1,0 +1,23 @@
+src/lib/media.ts
+  s_c6b7b75a12e31b::t_37891e4901c404 1-8,25,33
+  s_c6b7b75a12e31b::t_724c06d1e2e178 86,89-90
+  s_c6b7b75a12e31b::t_f08b79dc44d75c 42
+next.config.ts
+  s_c6b7b75a12e31b::t_57dada4f1339cf 10-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9f1f142f9262eaf584bdbe5ee099490edfbf90a9",
+  "prompts": {},
+  "sessions": {
+    "s_c6b7b75a12e31b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9ca892e9-86cd-4bb7-a8a4-bda58aff1a20",
+        "model": "grok-4.7"
+      },
+      "human_author": "Ester-yo <tabithahunterpipersa213421@gmail.com>"
+    }
+  }
+}
