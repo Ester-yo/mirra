@@ -1,3 +1,11 @@
+/** GitHub Pages serves the site under /mirra. Root-relative public files need that prefix. */
+export function withBase(src: string) {
+  if (!src || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src)) return src;
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+  if (!base || src === base || src.startsWith(`${base}/`)) return src;
+  return `${base}${src.startsWith("/") ? src : `/${src}`}`;
+}
+
 /** Commercial clips shipped in /video. preload=metadata, so size is not a reason to swap them out. */
 export const SHOWCASE_CLIPS = [
   "/video/产品展示1.mp4",
@@ -14,7 +22,7 @@ export const SHOWCASE_CLIPS = [
   "/video/批量生成视频1.mp4",
   "/video/批量生成视频2.mp4",
   "/video/批量生成视频3.mp4",
-];
+].map(withBase);
 
 /** Still frame pulled from the matching file in /video, so the card matches the clip. */
 export function posterForClip(src: string) {
@@ -22,7 +30,7 @@ export function posterForClip(src: string) {
   const file = src.split("?")[0].split("/").pop() ?? "";
   const base = file.replace(/\.(mp4|mov|webm)$/i, "");
   if (!base || base === file) return "";
-  return `/posters/${base}.jpg`;
+  return withBase(`/posters/${base}.jpg`);
 }
 
 const shot = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=960&q=75`;
@@ -31,7 +39,7 @@ const shot = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=
 export const LOCAL_FASHION = [
   "/pic/灰色裙子与白色相隔离，俯视图。时尚的校服.jpg",
   "/pic/制服鞋 - 小红书搜索.webp",
-];
+].map(withBase);
 
 export const CURATED = {
   fashion: [
@@ -75,8 +83,8 @@ export function playbackSrc(src: string) {
   if (!src) return "";
   if (src.startsWith("blob:") || src.startsWith("data:")) return src;
   if (/pexels\.com|mixkit\.co/i.test(src)) return fallbackClip(src);
-  return src;
+  return withBase(src);
 }
 
-export const LOCAL_TEMPLATE_CLIP = "/video/内置模板视频1.mp4";
-export const LOCAL_PRODUCT_CLIP = "/video/产品展示3.mp4";
+export const LOCAL_TEMPLATE_CLIP = withBase("/video/内置模板视频1.mp4");
+export const LOCAL_PRODUCT_CLIP = withBase("/video/产品展示3.mp4");
